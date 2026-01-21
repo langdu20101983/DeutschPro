@@ -1,0 +1,7 @@
+{
+  "name": "DeutschLernen Pro",
+  "description": "Một ứng dụng học tiếng Đức hiện đại, sinh động với sự hỗ trợ của AI, giúp bạn làm chủ tiếng Đức qua các bài học tương tác, ví dụ minh họa và bài tập thực hành.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

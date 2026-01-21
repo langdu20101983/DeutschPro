@@ -1,11 +1,10 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
+import { Lesson } from "../types";
 
-export const chatWithHans = async (message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[]) => {
+export const chatWithHans = async (message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[] | any[]) => {
   try {
-    // Fix: Create instance right before call using process.env.API_KEY directly.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [
@@ -17,20 +16,80 @@ export const chatWithHans = async (message: string, history: { role: 'user' | 'm
       ],
       config: {
         systemInstruction: `Bạn là Hans, một gia sư tiếng Đức cực kỳ vui tính, nhiệt huyết.
-        - Luôn bắt đầu bằng một lời chào tiếng Đức (hãy thay đổi linh hoạt: Moin, Servus, Hallo).
-        - Trả lời bằng tiếng Việt nhưng hãy lồng ghép các cụm từ tiếng Đức thông dụng.
-        - Nếu giải thích ngữ pháp, hãy dùng ví dụ về đồ ăn (Wurst, Pretzel) hoặc bóng đá Đức để sinh động.
-        - Khuyến khích người học bằng các câu như "Toll!", "Super!", "Cố lên!".`,
+        - Luôn bắt đầu bằng một lời chào tiếng Đức.
+        - Trả lời bằng tiếng Việt nhưng lồng ghép tiếng Đức.
+        - Khuyến khích người học bằng các câu như "Toll!", "Super!".`,
       }
     });
-
     return response.text;
   } catch (error: any) {
-    // Fix: Rethrow "Requested entity was not found" error to be handled by the UI for key re-selection.
-    if (error?.message?.includes("Requested entity was not found.")) {
-      throw error;
-    }
+    if (error?.message?.includes("Requested entity was not found.")) throw error;
     console.error("Gemini Error:", error);
+    return null;
+  }
+};
+
+export const generateDailyLesson = async (): Promise<Lesson | null> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const date = new Date().toDateString();
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Hãy tạo một bài học tiếng Đức ngắn gọn, thú vị cho ngày ${date}. Chủ đề ngẫu nhiên (ví dụ: tiếng lóng, lễ hội, hoặc một cấu trúc ngữ pháp hay).`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            id: { type: Type.STRING },
+            title: { type: Type.STRING },
+            germanTitle: { type: Type.STRING },
+            description: { type: Type.STRING },
+            category: { type: Type.STRING },
+            level: { type: Type.STRING },
+            content: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  section: { type: Type.STRING },
+                  text: { type: Type.STRING },
+                  examples: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        de: { type: Type.STRING },
+                        vi: { type: Type.STRING }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            exercises: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  question: { type: Type.STRING },
+                  options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  correctAnswer: { type: Type.STRING },
+                  explanation: { type: Type.STRING }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    const lesson = JSON.parse(response.text);
+    return { ...lesson, id: 'daily-' + date };
+  } catch (error) {
+    console.error("Error generating daily lesson:", error);
     return null;
   }
 };
@@ -45,9 +104,7 @@ export const generateQuizFeedback = async (question: string, userAnswer: string,
         });
         return response.text;
     } catch (error: any) {
-        if (error?.message?.includes("Requested entity was not found.")) {
-          throw error;
-        }
+        if (error?.message?.includes("Requested entity was not found.")) throw error;
         return null;
     }
 }

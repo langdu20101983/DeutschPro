@@ -4,8 +4,8 @@ export interface Lesson {
   title: string;
   germanTitle: string;
   description: string;
-  category: 'Grammar' | 'Vocabulary' | 'Conversation';
-  level: 'A1' | 'A2' | 'B1';
+  category: 'Grammar' | 'Vocabulary' | 'Conversation' | 'Culture' | 'Advanced';
+  level: 'A1' | 'A2' | 'B1' | 'B2';
   content: {
     section: string;
     text: string;

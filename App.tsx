@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from './components/Layout';
 import LessonContent from './components/LessonContent';
@@ -12,14 +13,13 @@ import {
 } from 'lucide-react';
 
 // Define the interface for the platform-provided AI key selection tools
-interface AIStudio {
-  hasSelectedApiKey: () => Promise<boolean>;
-  openSelectKey: () => Promise<void>;
-}
-
+// Use inline definition in declare global to avoid subsequent property declaration conflicts
 declare global {
   interface Window {
-    aistudio?: AIStudio;
+    aistudio?: {
+      hasSelectedApiKey: () => Promise<boolean>;
+      openSelectKey: () => Promise<void>;
+    };
   }
 }
 

@@ -16,9 +16,10 @@
             font-family: 'Outfit', sans-serif;
         }
     </style>
-    <!-- Khởi tạo đối tượng process giả lập để tránh lỗi trên trình duyệt -->
+    <!-- Khởi tạo đối tượng process giả lập một cách an toàn -->
     <script>
-      window.process = window.process || { env: {} };
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
     </script>
 <script type="importmap">
 {

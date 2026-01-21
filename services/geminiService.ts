@@ -3,18 +3,18 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 export const chatWithHans = async (message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[]) => {
   try {
-    // Khởi tạo AI bên trong hàm để đảm bảo process.env đã sẵn sàng và không gây crash top-level
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const key = process.env.API_KEY;
     
-    const response = await ai.models.generateContent({
+    if (!key) {
+      console.error("DEBUG: API_KEY is missing from process.env");
+      return "Lỗi cấu hình: Hans chưa tìm thấy mã khóa (API_KEY) trên Vercel. Bạn hãy kiểm tra lại tab Settings > Environment Variables nhé!";
+    }
+
+    const ai = new GoogleGenAI({ apiKey: key });
+    
+    // Sử dụng interface Chat để quản lý ngữ cảnh tốt hơn
+    const chat = ai.chats.create({
       model: 'gemini-3-flash-preview',
-      contents: [
-        ...history.map(h => ({ 
-          role: h.role === 'user' ? 'user' : 'model', 
-          parts: [{ text: h.parts[0].text }] 
-        })),
-        { role: 'user', parts: [{ text: message }] }
-      ],
       config: {
         systemInstruction: `Bạn là Hans, một giáo viên tiếng Đức vui tính và am hiểu sâu sắc về văn hóa Đức.
         - Hãy trả lời bằng tiếng Việt và thỉnh thoảng xen kẽ các câu tiếng Đức đơn giản.
@@ -22,18 +22,36 @@ export const chatWithHans = async (message: string, history: { role: 'user' | 'm
         - Nếu người học hỏi về mẹo học tập, hãy đưa ra những phương pháp hiện đại như Shadowing hoặc Spaced Repetition.
         - Luôn giữ thái độ khuyến khích và tích cực.`,
       },
+      history: history.map(h => ({
+        role: h.role,
+        parts: h.parts
+      }))
     });
 
+    const response = await chat.sendMessage({ message });
     return response.text;
-  } catch (error) {
-    console.error("Gemini Error:", error);
-    return "Ồ, Hans đang bận một chút. Hãy kiểm tra lại cấu hình API_KEY hoặc thử lại sau nhé! (Lỗi kết nối)";
+  } catch (error: any) {
+    console.error("Gemini Detailed Error:", error);
+    
+    // Xử lý các lỗi phổ biến
+    if (error.status === 403 || error.status === 401) {
+      return "Lỗi: Mã khóa API_KEY không hợp lệ hoặc đã hết hạn. Hãy kiểm tra lại trên Google AI Studio.";
+    }
+    
+    if (error.message?.includes("model")) {
+      return "Lỗi: Hans đang nâng cấp mô hình AI mới. Vui lòng thử lại sau vài phút.";
+    }
+
+    return "Ồ, Hans đang gặp chút vấn đề về kết nối mạng. Bạn hãy thử lại sau nhé!";
   }
 };
 
 export const generateQuizFeedback = async (question: string, userAnswer: string, isCorrect: boolean) => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const key = process.env.API_KEY;
+        if (!key) return null;
+
+        const ai = new GoogleGenAI({ apiKey: key });
         const prompt = `Câu hỏi: ${question}. Người học trả lời: ${userAnswer}. Kết quả: ${isCorrect ? 'Đúng' : 'Sai'}. 
         Hãy giải thích ngắn gọn tại sao đúng/sai và cho thêm 1 ví dụ tương tự bằng tiếng Đức và dịch sang tiếng Việt.`;
         

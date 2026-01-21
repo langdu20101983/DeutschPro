@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Lesson } from "../types";
 
 export const chatWithHans = async (message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[] | any[]) => {
@@ -17,14 +17,39 @@ export const chatWithHans = async (message: string, history: { role: 'user' | 'm
       config: {
         systemInstruction: `Bạn là Hans, một gia sư tiếng Đức cực kỳ vui tính, nhiệt huyết.
         - Luôn bắt đầu bằng một lời chào tiếng Đức.
-        - Trả lời bằng tiếng Việt nhưng lồng ghép tiếng Đức.
-        - Khuyến khích người học bằng các câu như "Toll!", "Super!".`,
+        - Trả lời bằng tiếng Việt nhưng lồng ghép tiếng Đức một cách tự nhiên.
+        - Khuyến khích người học bằng các câu như "Toll!", "Super!".
+        - Nếu người dùng nói bằng giọng nói, hãy trả lời ngắn gọn, súc tích để dễ nghe.`,
       }
     });
     return response.text;
   } catch (error: any) {
     if (error?.message?.includes("Requested entity was not found.")) throw error;
     console.error("Gemini Error:", error);
+    return null;
+  }
+};
+
+export const generateAudio = async (text: string): Promise<string | null> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            // Sử dụng giọng 'Kore' vì nó phù hợp với phong cách nhiệt huyết của Hans
+            prebuiltVoiceConfig: { voiceName: 'Kore' },
+          },
+        },
+      },
+    });
+    
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
+  } catch (error) {
+    console.error("Error generating audio:", error);
     return null;
   }
 };

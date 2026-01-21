@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { BookOpen, MessageCircle, Home, Award, ChevronRight, Menu, X } from 'lucide-react';
+import { BookOpen, MessageCircle, Home, Award, ChevronRight, Menu, X, Share2, CheckCircle } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +10,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showCopiedMsg, setShowCopiedMsg] = useState(false);
 
   const navItems = [
     { id: 'home', label: 'Trang chủ', icon: Home },
@@ -17,6 +18,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'tutor', label: 'Gia sư AI', icon: MessageCircle },
     { id: 'progress', label: 'Tiến độ', icon: Award },
   ];
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'DeutschLernen Pro',
+      text: 'Cùng mình học tiếng Đức cực vui với Hans AI nhé!',
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setShowCopiedMsg(true);
+        setTimeout(() => setShowCopiedMsg(false), 2000);
+      }
+    } catch (err) {
+      console.log('Error sharing:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
@@ -26,9 +47,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center font-bold text-black border-2 border-black">D</div>
           <span className="font-outfit font-bold text-xl tracking-tight">DeutschPro</span>
         </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? <X /> : <Menu />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleShare} className="p-2 text-slate-500">
+            <Share2 size={20} />
+          </button>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            {isMobileMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
       </header>
 
       {/* Sidebar Navigation */}
@@ -62,6 +88,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               {activeTab === item.id && <ChevronRight size={16} className="ml-auto" />}
             </button>
           ))}
+          
+          <div className="pt-4 mt-4 border-t border-slate-100">
+            <button
+              onClick={handleShare}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all relative"
+            >
+              <Share2 size={20} />
+              <span>Chia sẻ ngay</span>
+              {showCopiedMsg && (
+                <div className="absolute left-full ml-2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap animate-in fade-in slide-in-from-left-2">
+                  Đã sao chép!
+                </div>
+              )}
+            </button>
+          </div>
         </nav>
 
         <div className="mt-auto pt-6 border-t">

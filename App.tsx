@@ -6,29 +6,41 @@ import { lessons } from './data/lessons';
 import { hints, Hint } from './data/hints';
 import { UserProgress, Lesson } from './types';
 import { chatWithHans } from './services/geminiService';
-import { Sparkles, Send, BrainCircuit, Star, Flame, Trophy, CheckCircle, BookOpen, MessageCircle, Info, Lightbulb, Landmark, Zap } from 'lucide-react';
+import { Sparkles, Send, BrainCircuit, Star, Flame, Trophy, CheckCircle, BookOpen, MessageCircle, Info, Lightbulb, Landmark, Zap, AlertCircle } from 'lucide-react';
+
+const wordOfTheDay = [
+  { de: 'Fernweh', vi: 'Nỗi nhớ những nơi xa lạ (khao khát đi du lịch)', ex: 'Ich habe Fernweh.' },
+  { de: 'Feierabend', vi: 'Thời gian nghỉ ngơi sau giờ làm việc', ex: 'Endlich Feierabend!' },
+  { de: 'Gemütlichkeit', vi: 'Sự ấm cúng, dễ chịu, thoải mái', ex: 'Die Wohnung hat viel Gemütlichkeit.' },
+  { de: 'Weltschmerz', vi: 'Nỗi đau thế giới (cảm giác u sầu về thực tại)', ex: 'Er fühlt Weltschmerz.' }
+];
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [randomHint, setRandomHint] = useState<Hint>(hints[0]);
+  const [dailyWord, setDailyWord] = useState(wordOfTheDay[0]);
   const [progress, setProgress] = useState<UserProgress>({
     completedLessons: [],
     score: 0
   });
 
-  // Tutor State
   const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model'; parts: { text: string }[] }[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isApiReady, setIsApiReady] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('deutsch_progress');
     if (saved) setProgress(JSON.parse(saved));
-    
-    // Pick a random hint on load
     setRandomHint(hints[Math.floor(Math.random() * hints.length)]);
+    setDailyWord(wordOfTheDay[Math.floor(Math.random() * wordOfTheDay.length)]);
+    
+    // Kiểm tra API Key sơ bộ
+    if (!process.env.API_KEY || process.env.API_KEY === "undefined") {
+      setIsApiReady(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -64,10 +76,10 @@ const App: React.FC = () => {
         <div className="relative z-10 max-w-2xl">
           <div className="flex items-center gap-2 text-yellow-400 font-bold mb-4">
             <Sparkles size={20} />
-            <span>Herzlich Willkommen! (Chào mừng bạn!)</span>
+            <span>Herzlich Willkommen!</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-outfit font-bold mb-4 leading-tight">Làm chủ tiếng Đức chưa bao giờ dễ dàng đến thế.</h1>
-          <p className="text-slate-400 text-lg mb-8 leading-relaxed">Hans - Giáo viên AI am hiểu văn hóa Đức luôn sẵn sàng đồng hành cùng bạn trên con đường chinh phục ngôn ngữ mới.</p>
+          <h1 className="text-4xl md:text-5xl font-outfit font-bold mb-4 leading-tight">Chinh phục tiếng Đức cùng Hans AI.</h1>
+          <p className="text-slate-400 text-lg mb-8 leading-relaxed">Hans là gia sư AI am hiểu văn hóa Đức, giúp bạn học nhanh hơn, nhớ lâu hơn thông qua hội thoại thực tế.</p>
           <div className="flex flex-wrap gap-4">
             <button 
               onClick={() => setActiveTab('lessons')}
@@ -76,52 +88,39 @@ const App: React.FC = () => {
               Bắt đầu học ngay
             </button>
             <div className="flex items-center gap-4 px-6 py-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-              <div className="flex -space-x-3">
-                {[1, 2, 3].map(i => (
-                  <img key={i} src={`https://picsum.photos/seed/${i + 15}/100/100`} className="w-8 h-8 rounded-full border-2 border-slate-900" />
-                ))}
-              </div>
-              <span className="text-sm font-medium text-slate-300">1,200+ người đang học</span>
+               <span className="text-sm font-medium text-slate-300">Học phí: 0đ (Mãi mãi)</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Random Hint Widget */}
-      <div className={`
-        relative p-6 rounded-[2rem] border-2 shadow-sm flex flex-col md:flex-row items-center gap-6 overflow-hidden
-        ${randomHint.type === 'culture' ? 'bg-orange-50 border-orange-100' : 
-          randomHint.type === 'grammar' ? 'bg-blue-50 border-blue-100' : 
-          randomHint.type === 'achievement' ? 'bg-purple-50 border-purple-100' : 'bg-green-50 border-green-100'}
-      `}>
-        <div className={`
-          w-16 h-16 rounded-2xl flex items-center justify-center shrink-0
-          ${randomHint.type === 'culture' ? 'bg-orange-500 text-white' : 
-            randomHint.type === 'grammar' ? 'bg-blue-500 text-white' : 
-            randomHint.type === 'achievement' ? 'bg-purple-500 text-white' : 'bg-green-500 text-white'}
-        `}>
-          {randomHint.type === 'culture' ? <Landmark size={32} /> : 
-           randomHint.type === 'grammar' ? <Info size={32} /> : 
-           randomHint.type === 'achievement' ? <Trophy size={32} /> : <Lightbulb size={32} />}
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-             <span className="text-xs font-bold uppercase tracking-wider opacity-60">
-               {randomHint.type === 'culture' ? 'Văn hóa & Đất nước' : 
-                randomHint.type === 'grammar' ? 'Mẹo Ngữ pháp' : 
-                randomHint.type === 'achievement' ? 'Thành tựu Đức' : 'Mẹo học tập'}
-             </span>
-             <Zap size={14} className="text-yellow-500" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Word of the day */}
+        <div className="bg-white p-8 rounded-[2rem] border-2 border-slate-100 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Zap size={100} />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-1">{randomHint.title}</h3>
-          <p className="text-slate-600 leading-relaxed">{randomHint.content}</p>
+          <div className="flex items-center gap-2 mb-6 text-red-600 font-bold uppercase tracking-tighter text-sm">
+            <Zap size={16} /> Wort des Tages (Từ vựng mỗi ngày)
+          </div>
+          <h3 className="text-4xl font-bold text-slate-900 mb-2 font-outfit">{dailyWord.de}</h3>
+          <p className="text-xl text-slate-500 mb-6">{dailyWord.vi}</p>
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 italic text-slate-600">
+            "{dailyWord.ex}"
+          </div>
         </div>
-        <button 
-          onClick={() => setRandomHint(hints[Math.floor(Math.random() * hints.length)])}
-          className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-sm font-bold hover:bg-slate-50 transition-colors"
-        >
-          Khám phá thêm
-        </button>
+
+        {/* Daily Tip */}
+        <div className={`p-8 rounded-[2rem] border-2 shadow-sm flex flex-col justify-center gap-4 ${randomHint.type === 'culture' ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'}`}>
+          <div className="flex items-center gap-2">
+            <div className={`p-2 rounded-lg ${randomHint.type === 'culture' ? 'bg-orange-500' : 'bg-blue-500'} text-white`}>
+              {randomHint.type === 'culture' ? <Landmark size={20} /> : <Info size={20} />}
+            </div>
+            <span className="font-bold text-slate-900">{randomHint.title}</span>
+          </div>
+          <p className="text-slate-600 leading-relaxed">{randomHint.content}</p>
+          <button onClick={() => setRandomHint(hints[Math.floor(Math.random() * hints.length)])} className="text-sm font-bold text-slate-900 flex items-center gap-1 hover:underline">Xem mẹo khác <Zap size={14} /></button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -153,89 +152,6 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <div className="flex flex-col md:flex-row gap-8 items-start">
-        <div className="flex-1 space-y-6 w-full">
-          <h2 className="text-2xl font-outfit font-bold flex items-center gap-3">
-            <Star className="text-yellow-500 fill-yellow-500" />
-            Đề xuất hôm nay
-          </h2>
-          <div className="grid gap-4">
-            {lessons.filter(l => !progress.completedLessons.includes(l.id)).slice(0, 2).map(lesson => (
-              <div key={lesson.id} className="group bg-white p-6 rounded-3xl border-2 border-slate-100 hover:border-yellow-400 transition-all flex flex-col sm:flex-row items-center justify-between gap-6 cursor-pointer" onClick={() => { setSelectedLesson(lesson); setActiveTab('lesson-detail'); }}>
-                <div className="flex items-center gap-5">
-                  <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center font-bold text-2xl text-slate-800">
-                    {lesson.category === 'Grammar' ? 'G' : lesson.category === 'Vocabulary' ? 'V' : 'C'}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold">{lesson.title}</h3>
-                    <p className="text-slate-500 text-sm italic">{lesson.germanTitle}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                       <span className="text-[10px] bg-slate-900 text-white px-2 py-0.5 rounded-full font-bold">{lesson.level}</span>
-                       <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{lesson.category}</span>
-                    </div>
-                  </div>
-                </div>
-                <button className="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl group-hover:bg-yellow-400 group-hover:text-black transition-colors shrink-0">Bắt đầu</button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="w-full md:w-80 bg-red-600 rounded-[2.5rem] p-8 text-white">
-          <BrainCircuit size={40} className="mb-4 text-white" />
-          <h3 className="text-xl font-bold mb-2">Thử thách cùng Hans</h3>
-          <p className="text-red-100 text-sm mb-6 leading-relaxed">Bạn có biết người Đức có một từ cực dài "Rindfleischetikettierungsüberwachungsaufgabenübertragungsgesetz" không? Hans sẽ giải thích cho bạn!</p>
-          <button className="w-full py-3 bg-white text-red-600 font-bold rounded-xl hover:bg-yellow-400 hover:text-black transition-colors" onClick={() => setActiveTab('tutor')}>Chat ngay</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderLessons = () => (
-    <div className="space-y-8 animate-in slide-in-from-right-10 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-outfit font-bold mb-2">Lộ trình học tập</h1>
-          <p className="text-slate-500">Học theo từng bước để xây dựng nền móng vững chắc.</p>
-        </div>
-        <div className="flex gap-2">
-          {['A1', 'A2', 'B1'].map(lv => (
-            <button key={lv} className={`px-4 py-2 rounded-xl font-bold border-2 ${lv === 'A1' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-100'}`}>{lv}</button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {lessons.map(lesson => {
-          const isCompleted = progress.completedLessons.includes(lesson.id);
-          return (
-            <div 
-              key={lesson.id} 
-              onClick={() => { setSelectedLesson(lesson); setActiveTab('lesson-detail'); }}
-              className={`
-                group bg-white p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative overflow-hidden
-                ${isCompleted ? 'border-green-200' : 'border-slate-100 hover:border-yellow-400 hover:shadow-xl hover:-translate-y-1'}
-              `}
-            >
-              {isCompleted && (
-                <div className="absolute top-4 right-4 text-green-500">
-                  <CheckCircle size={24} fill="currentColor" className="text-white" />
-                </div>
-              )}
-              <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <BookOpen className="text-slate-700" size={24} />
-              </div>
-              <h3 className="font-bold text-lg mb-1 leading-tight">{lesson.title}</h3>
-              <p className="text-slate-400 text-sm mb-4 line-clamp-2">{lesson.description}</p>
-              <div className="mt-auto flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-full">{lesson.level}</span>
-                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{lesson.category}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 
@@ -245,25 +161,43 @@ const App: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center font-bold text-2xl border-2 border-black text-white">H</div>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+            <div className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-white rounded-full ${isApiReady ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
           </div>
           <div>
-            <h3 className="font-bold text-lg">Hans - Gia sư AI</h3>
-            <p className="text-slate-500 text-xs">Đang trực tuyến • Sẵn sàng giúp đỡ</p>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-lg">Hans - Gia sư AI</h3>
+              {!isApiReady && <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold">LỖI CẤU HÌNH</span>}
+            </div>
+            <p className="text-slate-500 text-xs">{isApiReady ? 'Đang trực tuyến • Sẵn sàng giúp đỡ' : 'Đang ngoại tuyến • Cần kiểm tra API Key'}</p>
           </div>
         </div>
         <button onClick={() => setChatHistory([])} className="text-slate-400 hover:text-red-500 text-xs font-bold uppercase tracking-wider transition-colors">Xóa lịch sử</button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {chatHistory.length === 0 && (
+        {!isApiReady && chatHistory.length === 0 && (
+          <div className="bg-red-50 border-2 border-red-100 p-6 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3 text-red-700 font-bold">
+              <AlertCircle size={24} /> Ồ! Hans chưa nhận được chìa khóa (API Key).
+            </div>
+            <p className="text-red-600 text-sm leading-relaxed">
+              Vercel cần bạn thêm biến môi trường có tên <strong>API_KEY</strong> trong phần Project Settings. Nếu bạn đã thêm rồi mà vẫn thấy thông báo này, hãy thử **Redeploy** lại trang web.
+            </p>
+            <div className="bg-white/50 p-4 rounded-xl border border-red-200">
+               <code className="text-xs text-red-900 break-all">Cài đặt -> Environment Variables -> Key: API_KEY -> Value: (Dán key của bạn)</code>
+            </div>
+          </div>
+        )}
+        
+        {chatHistory.length === 0 && isApiReady && (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto space-y-4">
              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
                 <MessageCircle size={40} />
              </div>
-             <p className="text-slate-500">Hãy bắt đầu bằng cách hỏi: <strong>"Chào Hans, nước Đức có gì thú vị nhất về lịch sử không?"</strong></p>
+             <p className="text-slate-500 font-medium">Bắt đầu bằng cách hỏi: <strong>"Chào Hans, tiếng Đức khó nhất là phần nào?"</strong></p>
           </div>
         )}
+
         {chatHistory.map((chat, idx) => (
           <div key={idx} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`
@@ -272,7 +206,17 @@ const App: React.FC = () => {
                 ? 'bg-slate-900 text-white rounded-tr-none' 
                 : 'bg-slate-100 text-slate-800 rounded-tl-none border border-slate-200'}
             `}>
-              {chat.parts[0].text.split('\n').map((line, i) => <p key={i} className="mb-2 last:mb-0">{line}</p>)}
+              {chat.parts[0].text.split('\n').map((line, i) => {
+                if (line.startsWith('HANS_CONFIG_ERROR:')) {
+                  return (
+                    <div key={i} className="bg-red-50 p-4 rounded-xl border border-red-100 text-red-800 my-2">
+                      <p className="font-bold flex items-center gap-2 mb-2"><AlertCircle size={16}/> Lỗi hệ thống</p>
+                      {line.replace('HANS_CONFIG_ERROR:', '').split('\n').map((l, j) => <p key={j} className="mb-1">{l}</p>)}
+                    </div>
+                  );
+                }
+                return <p key={i} className="mb-2 last:mb-0">{line}</p>
+              })}
             </div>
           </div>
         ))}
@@ -295,12 +239,13 @@ const App: React.FC = () => {
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Viết tin nhắn cho Hans..."
-            className="w-full pl-6 pr-16 py-4 bg-white border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-red-500 transition-colors shadow-sm"
+            placeholder={isApiReady ? "Hỏi Hans bất cứ điều gì..." : "Vui lòng cấu hình API Key trước..."}
+            disabled={!isApiReady}
+            className="w-full pl-6 pr-16 py-4 bg-white border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-red-500 transition-colors shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
           />
           <button 
             onClick={handleSendMessage}
-            disabled={!userInput.trim() || isTyping}
+            disabled={!userInput.trim() || isTyping || !isApiReady}
             className="absolute right-2 top-2 p-3 bg-red-600 text-white rounded-xl hover:bg-yellow-400 hover:text-black transition-all disabled:opacity-50"
           >
             <Send size={20} />
@@ -313,7 +258,52 @@ const App: React.FC = () => {
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'home' && renderHome()}
-      {activeTab === 'lessons' && renderLessons()}
+      {activeTab === 'lessons' && (
+        <div className="space-y-8 animate-in slide-in-from-right-10 duration-500 pb-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-outfit font-bold mb-2">Lộ trình học tập</h1>
+              <p className="text-slate-500">Học theo từng bước để xây dựng nền móng vững chắc.</p>
+            </div>
+            <div className="flex gap-2">
+              {['A1', 'A2', 'B1'].map(lv => (
+                <button key={lv} className={`px-4 py-2 rounded-xl font-bold border-2 ${lv === 'A1' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-100'}`}>{lv}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {lessons.map(lesson => {
+              const isCompleted = progress.completedLessons.includes(lesson.id);
+              return (
+                <div 
+                  key={lesson.id} 
+                  onClick={() => { setSelectedLesson(lesson); setActiveTab('lesson-detail'); }}
+                  className={`
+                    group bg-white p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative overflow-hidden
+                    ${isCompleted ? 'border-green-200' : 'border-slate-100 hover:border-yellow-400 hover:shadow-xl hover:-translate-y-1'}
+                  `}
+                >
+                  {isCompleted && (
+                    <div className="absolute top-4 right-4 text-green-500">
+                      <CheckCircle size={24} fill="currentColor" className="text-white" />
+                    </div>
+                  )}
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <BookOpen className="text-slate-700" size={24} />
+                  </div>
+                  <h3 className="font-bold text-lg mb-1 leading-tight">{lesson.title}</h3>
+                  <p className="text-slate-400 text-sm mb-4 line-clamp-2">{lesson.description}</p>
+                  <div className="mt-auto flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-full">{lesson.level}</span>
+                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">{lesson.category}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {activeTab === 'tutor' && renderTutor()}
       {activeTab === 'progress' && (
          <div className="space-y-8 animate-in zoom-in-95 duration-500 pb-10">
@@ -332,30 +322,6 @@ const App: React.FC = () => {
                  </div>
                  <h2 className="text-3xl font-bold mb-2">{progress.completedLessons.length}</h2>
                  <p className="text-slate-500 font-medium">Bài học đã hoàn thành</p>
-              </div>
-           </div>
-           
-           <div className="bg-white p-8 rounded-[2rem] border-2 border-slate-100">
-              <h3 className="text-xl font-bold mb-6">Lịch sử bài học</h3>
-              <div className="space-y-4">
-                 {progress.completedLessons.length > 0 ? (
-                   progress.completedLessons.map(id => {
-                     const lesson = lessons.find(l => l.id === id);
-                     return (
-                       <div key={id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                          <div className="flex items-center gap-4">
-                             <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                                <CheckCircle size={20} />
-                             </div>
-                             <span className="font-bold text-slate-800">{lesson?.title}</span>
-                          </div>
-                          <span className="text-xs font-bold text-slate-400 uppercase">{lesson?.level}</span>
-                       </div>
-                     )
-                   })
-                 ) : (
-                   <div className="py-12 text-center text-slate-400 italic">Bạn chưa hoàn thành bài học nào.</div>
-                 )}
               </div>
            </div>
          </div>

@@ -1,10 +1,11 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const chatWithHans = async (message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[]) => {
   try {
+    // Khởi tạo AI bên trong hàm để đảm bảo process.env đã sẵn sàng và không gây crash top-level
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [
@@ -26,15 +27,16 @@ export const chatWithHans = async (message: string, history: { role: 'user' | 'm
     return response.text;
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "Ồ, Hans đang bận một chút. Bạn có thể thử lại sau không? (Lỗi kết nối API)";
+    return "Ồ, Hans đang bận một chút. Hãy kiểm tra lại cấu hình API_KEY hoặc thử lại sau nhé! (Lỗi kết nối)";
   }
 };
 
 export const generateQuizFeedback = async (question: string, userAnswer: string, isCorrect: boolean) => {
-    const prompt = `Câu hỏi: ${question}. Người học trả lời: ${userAnswer}. Kết quả: ${isCorrect ? 'Đúng' : 'Sai'}. 
-    Hãy giải thích ngắn gọn tại sao đúng/sai và cho thêm 1 ví dụ tương tự bằng tiếng Đức và dịch sang tiếng Việt.`;
-    
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `Câu hỏi: ${question}. Người học trả lời: ${userAnswer}. Kết quả: ${isCorrect ? 'Đúng' : 'Sai'}. 
+        Hãy giải thích ngắn gọn tại sao đúng/sai và cho thêm 1 ví dụ tương tự bằng tiếng Đức và dịch sang tiếng Việt.`;
+        
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,

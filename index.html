@@ -16,6 +16,10 @@
             font-family: 'Outfit', sans-serif;
         }
     </style>
+    <!-- Khởi tạo đối tượng process giả lập để tránh lỗi trên trình duyệt -->
+    <script>
+      window.process = window.process || { env: {} };
+    </script>
 <script type="importmap">
 {
   "imports": {
@@ -30,5 +34,7 @@
 </head>
 <body>
     <div id="root"></div>
+    <!-- Nạp file entry point của ứng dụng -->
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>
